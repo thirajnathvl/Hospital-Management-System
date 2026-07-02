@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MedCore - Premium Hospital Management and Information Portal. Access medical records, book appointments, check bed availability, and view doctor schedules easily.">
+  <title>MedCore | Advanced Hospital Management System</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- SOS Emergency Overlay (Hidden by Default) -->
+  <div id="sos-overlay" class="sos-overlay hidden">
+    <div class="sos-container">
+      <div class="sos-siren">
+        <i data-lucide="alarm-smoke" class="siren-icon"></i>
+      </div>
+      <h2>EMERGENCY SOS ACTIVE</h2>
+      <p class="sos-subtext">The hospital response team has been dispatched to your location.</p>
+      <div class="sos-details">
+        <div class="detail-row">
+          <span>Current Location:</span>
+          <span class="highlight">GPS Active (Ward A Area)</span>
+        </div>
+        <div class="detail-row">
+          <span>Est. Response Time:</span>
+          <span class="highlight text-green">2 mins</span>
+        </div>
+        <div class="detail-row">
+          <span>Ambulance Status:</span>
+          <span class="highlight">Dispatched (Plate: MH-12-HE-4820)</span>
+        </div>
+      </div>
+      <div class="sos-actions">
+        <button id="cancel-sos-btn" class="btn btn-secondary-light">
+          <i data-lucide="x"></i> Cancel False Alarm
+        </button>
+        <a href="tel:911" class="btn btn-danger">
+          <i data-lucide="phone-call"></i> Call Hospital ER
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Container -->
+  <div class="app-wrapper">
+
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-area">
+          <div class="logo-icon">
+            <i data-lucide="activity" class="pulse-icon"></i>
+          </div>
+          <span class="logo-text">Med<span>Core</span></span>
+        </div>
+        <button id="close-sidebar-btn" class="close-sidebar-btn mobile-only" aria-label="Close Sidebar">
+          <i data-lucide="chevrons-left"></i>
+        </button>
+      </div>
+
+      <!-- User Context Display -->
+      <div class="sidebar-user-card">
+        <div class="avatar" id="sidebar-avatar">P</div>
+        <div class="user-info">
+          <h4 id="sidebar-user-name">John Doe</h4>
+          <span id="sidebar-user-role" class="badge-role badge-patient">Patient Portal</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Sidebar Navigation Menu -->
+      <nav class="sidebar-menu">
+        <div class="menu-group">
+          <span class="menu-label">MY PORTAL</span>
+          <ul id="portal-links">
+            <!-- Rendered Dynamically Based on Role -->
+          </ul>
+        </div>
+
+        <div class="menu-group">
+          <span class="menu-label">HOSPITAL INFO</span>
+          <ul>
+            <li>
+              <a href="#" class="nav-link" data-view="info-doctors">
+                <i data-lucide="users"></i> <span>Find a Doctor</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" class="nav-link" data-view="info-services">
+                <i data-lucide="stethoscope"></i> <span>Services & Pricing</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" class="nav-link" data-view="info-map">
+                <i data-lucide="map"></i> <span>Hospital Floor Map</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" class="nav-link" data-view="info-emergency">
+                <i data-lucide="heart-handshake"></i> <span>Emergency & SOS</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button id="sidebar-theme-toggle" class="sidebar-action-btn" title="Toggle Theme">
+          <i data-lucide="moon" class="theme-icon-dark"></i>
+          <i data-lucide="sun" class="theme-icon-light hidden"></i>
+          <span>Dark Mode</span>
+        </button>
+        <button id="sidebar-sos-trigger" class="btn btn-danger btn-block sos-trigger-btn">
+          <i data-lucide="alert-triangle"></i> EMERGENCY SOS
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <main class="main-container">
+      
+      <!-- Top Action Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="Toggle Navigation">
+            <i data-lucide="menu"></i>
+          </button>
+          <!-- Global Search -->
+          <div class="global-search-container">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="global-search" placeholder="Search medical files, doctors, services..." aria-label="Search">
+            <div id="search-dropdown" class="search-results-dropdown hidden"></div>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Role Selector Simulator -->
+          <div class="role-simulator-wrapper">
+            <label for="role-select" class="role-sim-label"><i data-lucide="cpu"></i> Switch Role:</label>
+            <select id="role-select" class="select-role-sim">
+              <option value="patient">Patient (John Doe)</option>
+              <option value="doctor">Doctor (Dr. Sarah Connor)</option>
+              <option value="admin">Administrator (Super Admin)</option>
+            </select>
+          </div>
+
+          <!-- Supabase Cloud Connection Status Badge -->
+          <div id="supabase-status-badge" class="supabase-status-badge state-offline" title="Supabase Database Status">
+            <i data-lucide="cloud-off" class="cloud-icon"></i>
+            <span>Local Sync</span>
+          </div>
+          <button id="supabase-config-btn" class="icon-btn" title="Supabase Cloud Settings">
+            <i data-lucide="database"></i>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div class="notification-wrapper">
+            <button id="noti-toggle-btn" class="icon-btn notification-btn" aria-label="Notifications">
+              <i data-lucide="bell"></i>
+              <span id="noti-badge" class="badge-noti hidden">3</span>
+            </button>
+            <div id="noti-dropdown" class="noti-dropdown hidden">
+              <div class="noti-header">
+                <h4>Notifications</h4>
+                <button id="clear-noti-btn" class="text-btn">Mark all read</button>
+              </div>
+              <ul id="noti-list" class="noti-list">
+                <!-- Loaded Dynamically -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- Quick User Menu -->
+          <div class="profile-menu-container">
+            <button id="profile-menu-btn" class="profile-trigger">
+              <div class="avatar-small" id="header-avatar">P</div>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dynamic Content Sections -->
+      <div id="content-area" class="content-area">
+
+        <!-- ================= PATIENT PORTAL VIEWS ================= -->
+        <!-- 1. Patient Dashboard -->
+        <section id="patient-dashboard" class="view-section active">
+          <div class="view-header">
+            <div>
+              <h1 class="welcome-text">Hello, John!</h1>
+              <p class="subtitle-text">Welcome back. Your health vitals look excellent today.</p>
+            </div>
+            <div class="date-display" id="patient-date">Thursday, July 2, 2026</div>
+          </div>
+
+          <!-- Quick Actions Grid -->
+          <div class="quick-actions-bar">
+            <button class="action-card-btn" data-go-view="patient-booking">
+              <div class="action-icon icon-blue"><i data-lucide="calendar-plus"></i></div>
+              <span>Book Appointment</span>
+            </button>
+            <button class="action-card-btn" data-go-view="patient-records">
+              <div class="action-icon icon-green"><i data-lucide="clipboard-list"></i></div>
+              <span>Medical History</span>
+            </button>
+            <button class="action-card-btn" data-go-view="patient-prescriptions">
+              <div class="action-icon icon-orange"><i data-lucide="pill"></i></div>
+              <span>Prescriptions</span>
+            </button>
+            <button class="action-card-btn" data-go-view="patient-billing">
+              <div class="action-icon icon-purple"><i data-lucide="credit-card"></i></div>
+              <span>Pay Invoices</span>
+            </button>
+          </div>
+
+          <!-- Dashboard Vitals grid -->
+          <div class="dashboard-grid">
+            <!-- Health Stats Cards -->
+            <div class="grid-card vitals-summary-card">
+              <div class="card-header-line">
+                <h3>Current Vitals</h3>
+                <span class="card-badge status-normal">Syncing live</span>
+              </div>
+              <div class="vitals-grid">
+                <div class="vital-item">
+                  <div class="vital-header">
+                    <i data-lucide="heart" class="text-rose animate-pulse-slow"></i>
+                    <span>Heart Rate</span>
+                  </div>
+                  <div class="vital-value">72 <span class="unit">bpm</span></div>
+                  <div class="vital-status text-green"><i data-lucide="arrow-up-right"></i> Stable</div>
+                </div>
+                <div class="vital-item">
+                  <div class="vital-header">
+                    <i data-lucide="droplet" class="text-blue"></i>
+                    <span>Blood Pressure</span>
+                  </div>
+                  <div class="vital-value">120/80 <span class="unit">mmHg</span></div>
+                  <div class="vital-status text-green">Optimal</div>
+                </div>
+                <div class="vital-item">
+                  <div class="vital-header">
+                    <i data-lucide="thermometer" class="text-orange"></i>
+                    <span>Temperature</span>
+                  </div>
+                  <div class="vital-value">98.6 <span class="unit">°F</span></div>
+                  <div class="vital-status text-green">Normal</div>
+                </div>
+                <div class="vital-item">
+                  <div class="vital-header">
+                    <i data-lucide="wind" class="text-teal"></i>
+                    <span>SpO2 Oxygen</span>
+                  </div>
+                  <div class="vital-value">99 <span class="unit">%</span></div>
+                  <div class="vital-status text-green">Excellent</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Health Card Quick Info -->
+            <div class="grid-card digital-health-card">
+              <div class="card-header-line">
+                <h3>Digital Health Card</h3>
+                <i data-lucide="qr-code" class="text-muted"></i>
+              </div>
+              <div class="health-card-body">
+                <div class="card-chip"></div>
+                <div class="card-patient-name">JOHNATHAN DOE</div>
+                <div class="card-details-grid">
+                  <div>
+                    <label>Patient ID</label>
+                    <p>PT-980042</p>
+                  </div>
+                  <div>
+                    <label>Blood Group</label>
+                    <p>O Positive (O+)</p>
+                  </div>
+                  <div>
+                    <label>Allergies</label>
+                    <p class="text-rose font-weight-600">Penicillin, Peanuts</p>
+                  </div>
+                  <div>
+                    <label>Emergency Contact</label>
+                    <p>Jane Doe (+1 555-0199)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Appointments and Prescriptions Grid -->
+          <div class="dashboard-grid margin-top-24">
+            <!-- Scheduled appointments -->
+            <div class="grid-card col-span-2">
+              <div class="card-header-line border-bottom">
+                <h3>Your Upcoming Appointments</h3>
+                <button class="btn btn-secondary-light btn-sm" data-go-view="patient-booking">Book New</button>
+              </div>
+              <div class="appointments-list" id="patient-dashboard-appointments">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Active medications -->
+            <div class="grid-card">
+              <div class="card-header-line border-bottom">
+                <h3>Active Medications</h3>
+                <button class="text-btn btn-sm" data-go-view="patient-prescriptions">View All</button>
+              </div>
+              <div class="meds-list" id="patient-dashboard-meds">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Patient Booking View -->
+        <section id="patient-booking" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Book a Medical Consultation</h1>
+              <p class="subtitle-text">Select your specialty, doctor, and preferred time to schedule your appointment.</p>
+            </div>
+          </div>
+
+          <div class="booking-layout-grid">
+            <!-- Booking Form -->
+            <div class="grid-card">
+              <form id="appointment-booking-form" class="standard-form">
+                <div class="form-group">
+                  <label for="booking-specialty">Select Medical Department</label>
+                  <select id="booking-specialty" required>
+                    <option value="" disabled selected>Choose Department...</option>
+                    <option value="Cardiology">Cardiology (Heart Care)</option>
+                    <option value="Neurology">Neurology (Brain & Spine)</option>
+                    <option value="Pediatrics">Pediatrics (Child Health)</option>
+                    <option value="Orthopedics">Orthopedics (Bone & Joints)</option>
+                    <option value="Dermatology">Dermatology (Skin & Hair)</option>
+                    <option value="General Medicine">General Medicine (Primary Care)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="booking-doctor">Select Healthcare Practitioner</label>
+                  <select id="booking-doctor" required disabled>
+                    <option value="" disabled selected>Select department first...</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group col-half">
+                    <label for="booking-date">Appointment Date</label>
+                    <input type="date" id="booking-date" required min="2026-07-02">
+                  </div>
+                  <div class="form-group col-half">
+                    <label for="booking-time">Preferred Slot</label>
+                    <select id="booking-time" required>
+                      <option value="" disabled selected>Select slot...</option>
+                      <option value="09:00 AM">09:00 AM - 09:30 AM</option>
+                      <option value="10:00 AM">10:00 AM - 10:30 AM</option>
+                      <option value="11:30 AM">11:30 AM - 12:00 PM</option>
+                      <option value="02:00 PM">02:00 PM - 02:30 PM</option>
+                      <option value="03:30 PM">03:30 PM - 04:00 PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="booking-reason">Symptoms or Reason for Visit</label>
+                  <textarea id="booking-reason" rows="3" placeholder="Describe symptoms briefly (e.g., routine checkup, recurring headaches)..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i data-lucide="check-circle-2"></i> Confirm Booking Request
+                </button>
+              </form>
+            </div>
+
+            <!-- Doctor quick preview card -->
+            <div class="grid-card doctor-quick-preview" id="doctor-booking-preview">
+              <div class="preview-empty-state">
+                <i data-lucide="user-round-cog" class="large-icon text-muted"></i>
+                <h3>Practitioner Profile</h3>
+                <p>Select a department and doctor to view their schedule, experience, ratings, and ward location.</p>
+              </div>
+              <div class="preview-content hidden" id="doctor-booking-preview-card">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Patient Medical Records View -->
+        <section id="patient-records" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Electronic Health Record (EHR)</h1>
+              <p class="subtitle-text">Access your personal laboratory records, official diagnoses, and vitals history.</p>
+            </div>
+            <button class="btn btn-secondary-light" onclick="window.print()">
+              <i data-lucide="printer"></i> Export Health Record
+            </button>
+          </div>
+
+          <div class="records-layout">
+            <!-- Records Navigation List -->
+            <div class="grid-card records-history-panel">
+              <h3>Medical History Timeline</h3>
+              <div class="history-timeline" id="patient-history-timeline">
+                <!-- Dynamically Rendered Timeline -->
+              </div>
+            </div>
+
+            <!-- Selected Record Detailed View -->
+            <div class="grid-card record-details-panel" id="record-details-panel">
+              <div class="preview-empty-state">
+                <i data-lucide="file-text" class="large-icon text-muted"></i>
+                <h3>Select a Record</h3>
+                <p>Click on any entry in your timeline to view detailed descriptions, lab measurements, and clinical opinions.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Patient Prescriptions View -->
+        <section id="patient-prescriptions" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Active Prescriptions & Medication</h1>
+              <p class="subtitle-text">Manage your pharmaceutical orders, active dosage plans, and track your daily intake.</p>
+            </div>
+          </div>
+
+          <div class="prescription-grid" id="prescriptions-grid-container">
+            <!-- Loaded Dynamically -->
+          </div>
+        </section>
+
+        <!-- 5. Patient Billing View -->
+        <section id="patient-billing" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Invoices, Billing & Payments</h1>
+              <p class="subtitle-text">Keep track of your consultation invoices, diagnostic lab charges, and insurance coverage.</p>
+            </div>
+          </div>
+
+          <div class="billing-grid">
+            <!-- Financial Summary Cards -->
+            <div class="grid-card flex-row justify-between">
+              <div class="flex-column">
+                <span class="label text-muted">Outstanding Balance</span>
+                <span class="value-large text-rose" id="billing-outstanding">$0.00</span>
+              </div>
+              <div class="divider-y"></div>
+              <div class="flex-column">
+                <span class="label text-muted">Paid This Year</span>
+                <span class="value-large text-green">$1,420.00</span>
+              </div>
+              <div class="divider-y"></div>
+              <div class="flex-column">
+                <span class="label text-muted">Insurance Copay Benefit</span>
+                <span class="value-large text-blue">80% Covered</span>
+              </div>
+            </div>
+
+            <!-- Invoices Table/List -->
+            <div class="grid-card margin-top-24">
+              <div class="card-header-line border-bottom">
+                <h3>Invoice History</h3>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice ID</th>
+                      <th>Date Issued</th>
+                      <th>Description</th>
+                      <th>Total Amount</th>
+                      <th>Insurance Paid (80%)</th>
+                      <th>Patient Copay (20%)</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="billing-table-body">
+                    <!-- Dynamically Rendered Invoices -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= DOCTOR PORTAL VIEWS ================= -->
+        <!-- 1. Doctor Dashboard -->
+        <section id="doctor-dashboard" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1 class="welcome-text">Welcome back, Dr. Connor</h1>
+              <p class="subtitle-text">General Cardiology | Clinic Room 302, Floor 3</p>
+            </div>
+            <div class="date-display" id="doctor-date">Thursday, July 2, 2026</div>
+          </div>
+
+          <!-- Doctor Stats -->
+          <div class="quick-actions-bar">
+            <div class="stat-card">
+              <span class="label text-muted">Total Consultations Today</span>
+              <span class="value-large text-blue" id="doc-stat-consultations">8 Patients</span>
+            </div>
+            <div class="stat-card">
+              <span class="label text-muted">Completed Consults</span>
+              <span class="value-large text-green" id="doc-stat-completed">5 Patients</span>
+            </div>
+            <div class="stat-card">
+              <span class="label text-muted">Pending Reviews</span>
+              <span class="value-large text-orange">3 Patients</span>
+            </div>
+            <div class="stat-card">
+              <span class="label text-muted">Ward Check-ins</span>
+              <span class="value-large text-purple">2 In-Patients</span>
+            </div>
+          </div>
+
+          <!-- Doctor Schedule List -->
+          <div class="dashboard-grid margin-top-24">
+            <div class="grid-card col-span-2">
+              <div class="card-header-line border-bottom">
+                <h3>Today's Appointment Schedule</h3>
+                <span class="card-badge badge-blue">Clinic Shift: 09:00 AM - 05:00 PM</span>
+              </div>
+              <div class="schedule-timeline" id="doctor-schedule-list">
+                <!-- Dynamically populated list -->
+              </div>
+            </div>
+
+            <!-- Doctor Quick Actions -->
+            <div class="grid-card">
+              <div class="card-header-line border-bottom">
+                <h3>Quick Clinic Actions</h3>
+              </div>
+              <div class="doctor-quick-actions">
+                <button class="btn btn-primary btn-block" data-go-view="doctor-ehr">
+                  <i data-lucide="edit-3"></i> Open EHR / Write Prescription
+                </button>
+                <button class="btn btn-secondary-light btn-block" data-go-view="info-doctors">
+                  <i data-lucide="search-code"></i> Check On-Call Roster
+                </button>
+                <div class="divider-x"></div>
+                <div class="status-box">
+                  <label class="font-weight-600">My Attendance State:</label>
+                  <div class="toggle-btn-group">
+                    <button class="btn btn-sm btn-green" id="btn-status-active">Available</button>
+                    <button class="btn btn-sm btn-secondary-light" id="btn-status-break">On Break</button>
+                    <button class="btn btn-sm btn-secondary-light" id="btn-status-out">Offline</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Doctor EHR Form View -->
+        <section id="doctor-ehr" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Electronic Health Record (EHR) Writer</h1>
+              <p class="subtitle-text">Diagnose patients, record vital readings, and submit new digital prescriptions to the pharmacy.</p>
+            </div>
+          </div>
+
+          <div class="ehr-layout-grid">
+            <!-- EHR Form Card -->
+            <div class="grid-card">
+              <form id="doctor-ehr-form" class="standard-form">
+                <div class="form-group">
+                  <label for="ehr-patient">Select Patient</label>
+                  <select id="ehr-patient" required>
+                    <option value="" disabled selected>Select Active Patient...</option>
+                    <option value="John Doe">John Doe (ID: PT-980042)</option>
+                    <option value="Mary Smith">Mary Smith (ID: PT-980056)</option>
+                    <option value="Robert Johnson">Robert Johnson (ID: PT-980091)</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group col-third">
+                    <label for="ehr-bp">BP (mmHg)</label>
+                    <input type="text" id="ehr-bp" placeholder="e.g. 120/80" required>
+                  </div>
+                  <div class="form-group col-third">
+                    <label for="ehr-pulse">Pulse (bpm)</label>
+                    <input type="number" id="ehr-pulse" placeholder="e.g. 72" required>
+                  </div>
+                  <div class="form-group col-third">
+                    <label for="ehr-temp">Temp (°F)</label>
+                    <input type="number" id="ehr-temp" step="0.1" placeholder="e.g. 98.6" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="ehr-diagnosis">Primary Diagnosis</label>
+                  <input type="text" id="ehr-diagnosis" placeholder="e.g. Chronic Hypertension, Sinusitis" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="ehr-notes">Clinical Assessment Notes</label>
+                  <textarea id="ehr-notes" rows="3" placeholder="Log patient history, symptoms reported, exam notes..." required></textarea>
+                </div>
+
+                <div class="divider-x"></div>
+
+                <div class="prescription-builder">
+                  <h4 class="section-subheading">Prescription Builder</h4>
+                  <div class="form-row">
+                    <div class="form-group col-half">
+                      <label for="ehr-medication">Drug Name</label>
+                      <input type="text" id="ehr-medication" placeholder="e.g. Lisinopril 10mg">
+                    </div>
+                    <div class="form-group col-half">
+                      <label for="ehr-dosage">Dosage Frequency</label>
+                      <input type="text" id="ehr-dosage" placeholder="e.g. 1 tablet daily in morning">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group col-half">
+                      <label for="ehr-duration">Duration</label>
+                      <input type="text" id="ehr-duration" placeholder="e.g. 30 days">
+                    </div>
+                    <div class="form-group col-half">
+                      <label for="ehr-refills">Refills Allowed</label>
+                      <input type="number" id="ehr-refills" value="0" min="0">
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i data-lucide="folder-heart"></i> Save Record & Dispatch Prescription
+                </button>
+              </form>
+            </div>
+
+            <!-- Patient Records Summary Card (Read-only lookup) -->
+            <div class="grid-card patient-record-preview" id="doctor-patient-preview">
+              <div class="preview-empty-state">
+                <i data-lucide="user" class="large-icon text-muted"></i>
+                <h3>Patient Vitals & File</h3>
+                <p>Select a patient in the dropdown list to load their existing health cards, drug allergies, and clinic history.</p>
+              </div>
+              <div class="preview-content hidden" id="doctor-patient-preview-card">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= ADMINISTRATOR PORTAL VIEWS ================= -->
+        <!-- Admin Dashboard -->
+        <section id="admin-dashboard" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1 class="welcome-text">Hospital Control Center</h1>
+              <p class="subtitle-text">Live resource oversight, ward allocation, and system stats.</p>
+            </div>
+            <div class="date-display" id="admin-date">Thursday, July 2, 2026</div>
+          </div>
+
+          <!-- Hospital Live Counts Grid -->
+          <div class="dashboard-grid">
+            <div class="grid-card flex-row justify-between stat-overview-card">
+              <div class="flex-column">
+                <span class="label text-muted">Patient Admissions</span>
+                <span class="value-large text-blue" id="admin-stat-admissions">142</span>
+                <span class="sub-label text-green"><i data-lucide="trending-up"></i> +12% this week</span>
+              </div>
+              <div class="divider-y"></div>
+              <div class="flex-column">
+                <span class="label text-muted">Staff Duty Status</span>
+                <span class="value-large text-green" id="admin-stat-staff">58 / 64</span>
+                <span class="sub-label text-muted">Doctors: 18 Online</span>
+              </div>
+              <div class="divider-y"></div>
+              <div class="flex-column">
+                <span class="label text-muted">Bed Availability</span>
+                <span class="value-large text-orange" id="admin-stat-beds">32 Free Beds</span>
+                <span class="sub-label text-orange">ICU Occupancy: 90%</span>
+              </div>
+              <div class="divider-y"></div>
+              <div class="flex-column">
+                <span class="label text-muted">Emergency State</span>
+                <button id="admin-emergency-toggle" class="btn btn-sm btn-danger border-radius-sm margin-top-8">
+                  <i data-lucide="bell-ring"></i> Level 1 Active
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Department Loads and Occupancy Grid -->
+          <div class="dashboard-grid margin-top-24">
+            <!-- Occupancy bar graph representation -->
+            <div class="grid-card col-span-2">
+              <div class="card-header-line border-bottom">
+                <h3>Ward Bed Occupancy Metrics</h3>
+              </div>
+              <div class="occupancy-stats-list" id="admin-ward-list">
+                <!-- Dynamically Rendered progress bars -->
+              </div>
+            </div>
+
+            <!-- Live logs and updates -->
+            <div class="grid-card">
+              <div class="card-header-line border-bottom">
+                <h3>Real-time Admission Logs</h3>
+              </div>
+              <ul class="activity-logs" id="admin-activity-logs">
+                <!-- Dynamically rendered activity -->
+              </ul>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= SHARED INFORMATION CENTER ================= -->
+        <!-- 1. Doctor Directory (Find a Doctor) -->
+        <section id="info-doctors" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Doctor Directory & Duty Rosters</h1>
+              <p class="subtitle-text">Search for medical experts, view clinic room locations, and check real-time attendance.</p>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="grid-card filters-bar flex-row gap-16 justify-between flex-wrap">
+            <div class="search-filter-wrapper flex-grow">
+              <i data-lucide="search" class="filter-icon"></i>
+              <input type="text" id="doctor-dir-search" placeholder="Search doctors by name or specialty...">
+            </div>
+            <div class="select-filters flex-row gap-12">
+              <select id="doctor-dir-dept">
+                <option value="ALL">All Departments</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Neurology">Neurology</option>
+                <option value="Pediatrics">Pediatrics</option>
+                <option value="Orthopedics">Orthopedics</option>
+                <option value="General Medicine">General Medicine</option>
+              </select>
+              <select id="doctor-dir-status">
+                <option value="ALL">All Availability States</option>
+                <option value="Available">Available Now</option>
+                <option value="On Break">On Break</option>
+                <option value="Offline">Offline</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Doctors Grid -->
+          <div class="doctor-dir-grid margin-top-24" id="doctor-dir-container">
+            <!-- Rendered Dynamically -->
+          </div>
+        </section>
+
+        <!-- 2. Services & Pricing Guide -->
+        <section id="info-services" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Hospital Clinical Services & Outpatient Fees</h1>
+              <p class="subtitle-text">Clear, transparent pricing breakdown of diagnostic services, wards, and consult tariffs.</p>
+            </div>
+          </div>
+
+          <div class="services-tab-wrapper">
+            <!-- Services Category Tabs -->
+            <div class="services-tabs" id="services-tabs-container">
+              <button class="services-tab-btn active" data-category="consultations">Consultations & Wards</button>
+              <button class="services-tab-btn" data-category="diagnostics">Diagnostics & Labs</button>
+              <button class="services-tab-btn" data-category="imaging">Radiology & Imaging</button>
+              <button class="services-tab-btn" data-category="surgeries">Surgical Procedures</button>
+            </div>
+
+            <!-- Active Services Table List -->
+            <div class="grid-card margin-top-16">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Service Name</th>
+                      <th>Standard Cost</th>
+                      <th>Insurance Copay (80%)</th>
+                      <th>Expected Patient Fee</th>
+                      <th>Average Turnaround / Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="services-table-body">
+                    <!-- Loaded dynamically based on tab -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Hospital Floor Map -->
+        <section id="info-map" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Hospital Interactive Floor Navigation</h1>
+              <p class="subtitle-text">Select a level to view clinical sections, check-in desks, pharmacies, and emergency exits.</p>
+            </div>
+          </div>
+
+          <div class="map-layout-grid">
+            <!-- Level Selector and Section list -->
+            <div class="grid-card map-levels-card">
+              <h3>Select Hospital Level</h3>
+              <div class="level-btn-list" id="map-level-selector">
+                <button class="level-btn active" data-level="3">Level 3 - Specialty Wards & Clinics</button>
+                <button class="level-btn" data-level="2">Level 2 - Operation Theatres & ICU</button>
+                <button class="level-btn" data-level="1">Level 1 - Labs, Diagnostics & ER</button>
+                <button class="level-btn" data-level="0">Ground Floor - Reception & Pharmacy</button>
+              </div>
+
+              <div class="divider-x"></div>
+
+              <h3>Current Level Rooms</h3>
+              <ul class="room-indicator-list" id="map-room-list">
+                <!-- Dynamically populated -->
+              </ul>
+            </div>
+
+            <!-- Live map rendering -->
+            <div class="grid-card map-canvas-card">
+              <div class="map-header">
+                <h3 id="map-current-title">Level 3 Map</h3>
+                <span class="card-badge badge-green"><i data-lucide="compass"></i> Compass Active</span>
+              </div>
+              
+              <!-- SVG Visual Representation of Wards -->
+              <div class="interactive-map-wrapper">
+                <div class="map-floor-layout" id="map-visual-container">
+                  <!-- SVG injected dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. Emergency & SOS Info -->
+        <section id="info-emergency" class="view-section">
+          <div class="view-header">
+            <div>
+              <h1>Emergency Care & First-Aid Protocol</h1>
+              <p class="subtitle-text">Fast access to active hotlines, ambulance dispatch tracking, and critical injury support guide.</p>
+            </div>
+          </div>
+
+          <div class="emergency-guide-grid">
+            <!-- High Alert Box -->
+            <div class="grid-card emergency-primary-card col-span-2">
+              <div class="card-header-line">
+                <h2>Is it an immediate emergency?</h2>
+                <i data-lucide="phone-call" class="pulse-icon text-white large-icon"></i>
+              </div>
+              <p>For life-threatening situations, trigger the global SOS system or call our Level 1 trauma team directly.</p>
+              <div class="emergency-phone-contacts margin-top-16">
+                <div class="contact-number-box">
+                  <span class="label">Trauma / ER hotline</span>
+                  <a href="tel:18005559000" class="number">+1 (800) 555-9000</a>
+                </div>
+                <div class="contact-number-box">
+                  <span class="label">Ambulance Dispatch</span>
+                  <a href="tel:18005559111" class="number">+1 (800) 555-9111</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ambulance live track simulator -->
+            <div class="grid-card">
+              <div class="card-header-line border-bottom">
+                <h3>Live Ambulance Fleet status</h3>
+              </div>
+              <div class="ambulance-tracker-body" id="ambulance-status-container">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- First Aid Instructions -->
+            <div class="grid-card col-span-2">
+              <div class="card-header-line border-bottom">
+                <h3>Immediate First-Aid Guides</h3>
+              </div>
+              <div class="first-aid-grid">
+                <div class="first-aid-item">
+                  <h4><i data-lucide="heart-pulse" class="text-rose"></i> Cardiac Arrest (CPR)</h4>
+                  <p>Check responsiveness. Call ER. Push hard and fast in the center of the chest (100-120 compressions per min).</p>
+                </div>
+                <div class="first-aid-item">
+                  <h4><i data-lucide="shield-alert" class="text-orange"></i> Severe Bleeding</h4>
+                  <p>Apply firm, direct pressure to the wound using clean cloth or bandage. Elevate above the heart if possible.</p>
+                </div>
+                <div class="first-aid-item">
+                  <h4><i data-lucide="flame" class="text-orange"></i> Burns Treatment</h4>
+                  <p>Cool the burn with running cool tap water for 10-20 minutes. Do NOT apply ice or butter. Cover loosely with sterile wrap.</p>
+                </div>
+                <div class="first-aid-item">
+                  <h4><i data-lucide="baby" class="text-blue"></i> Pediatric Choking</h4>
+                  <p>Give up to 5 back blows between shoulder blades, then 5 quick chest thrusts. Repeat until blockage clears.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Booking Confirmation Modal -->
+  <div id="booking-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i data-lucide="calendar-check" class="text-green"></i> Appointment Scheduled</h3>
+        <button class="close-modal-btn" id="close-booking-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" id="booking-modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="confirm-booking-modal-ok">Great, Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase Settings Modal -->
+  <div id="supabase-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3><i data-lucide="database" class="text-blue"></i> Supabase Integration</h3>
+        <button class="close-modal-btn" id="close-supabase-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>Sync your local app data with a live Supabase Postgres database. Fill in your project credentials below:</p>
+        
+        <form id="supabase-config-form" class="standard-form margin-top-16">
+          <div class="form-group">
+            <label for="supabase-url">Supabase Project URL</label>
+            <input type="url" id="supabase-url" placeholder="https://your-project.supabase.co" required>
+          </div>
+          <div class="form-group">
+            <label for="supabase-anon-key">Anon Public API Key</label>
+            <input type="text" id="supabase-anon-key" placeholder="eyJhbGciOi..." required style="font-family: monospace; font-size: 11px;">
+          </div>
+          <div class="flex-row gap-12 margin-top-8">
+            <button type="button" id="btn-test-supabase" class="btn btn-secondary-light flex-grow">
+              <i data-lucide="zap"></i> Test & Validate
+            </button>
+            <button type="submit" id="btn-save-supabase" class="btn btn-primary flex-grow">
+              <i data-lucide="save"></i> Connect & Sync
+            </button>
+          </div>
+        </form>
+        
+        <div id="supabase-test-feedback" class="margin-top-12 text-center" style="font-size: 13px; font-weight: 600;"></div>
+        
+        <div class="divider-x"></div>
+        
+        <div class="info-alert" style="background-color: var(--color-orange-light); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(245, 158, 11, 0.2); display: flex; flex-direction: column; gap: 4px;">
+          <h4 style="color: var(--color-orange); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; margin: 0;">
+            <i data-lucide="alert-circle" style="width:16px; height:16px;"></i> Schema Setup Required
+          </h4>
+          <p style="font-size: 11px; line-height: 1.4; color: var(--text-secondary); margin: 0;">
+            Before connecting, copy the SQL table schema instructions from the <a href="file:///C:/Users/Admin/.gemini/antigravity/scratch/hospital-management-system/schema.sql" target="_blank" style="color: var(--color-primary); font-weight:600;">schema.sql</a> file and run it inside your Supabase project's SQL Editor.
+          </p>
+        </div>
+        
+        <div id="supabase-disconnect-block" class="margin-top-16 hidden">
+          <button id="btn-disconnect-supabase" class="btn btn-danger btn-block btn-sm">
+            <i data-lucide="log-out"></i> Disconnect Database & Revert to Mock Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script logic loaded at the bottom -->
+  <script src="app.js"></script>
+</body>
+</html>
