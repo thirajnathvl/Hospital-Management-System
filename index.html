@@ -996,6 +996,47 @@
     </div>
   </div>
 
+  <!-- User Profile Modal -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3><i data-lucide="user" class="text-blue"></i> Patient Profile</h3>
+        <button class="close-modal-btn" id="close-profile-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="flex-column" style="align-items: center; text-align: center; margin-bottom: 20px;">
+          <div class="avatar" id="profile-avatar-char" style="width: 70px; height: 70px; font-size: 28px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, var(--color-primary), var(--color-purple)); color: white; font-weight: 700;">P</div>
+          <h3 id="profile-display-name" style="font-size: 18px; font-weight: 700; margin: 0;">John Doe</h3>
+          <span class="badge-role badge-patient" style="margin-top: 6px; display: inline-block;">Patient</span>
+        </div>
+        
+        <form id="profile-edit-form" class="standard-form">
+          <div class="form-group">
+            <label for="profile-input-name">Full Name</label>
+            <input type="text" id="profile-input-name" value="John Doe" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-half">
+              <label for="profile-input-blood">Blood Group</label>
+              <input type="text" id="profile-input-blood" value="O+" required>
+            </div>
+            <div class="form-group col-half">
+              <label for="profile-input-phone">Emergency Phone</label>
+              <input type="tel" id="profile-input-phone" value="+1 555-0199" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="profile-input-allergies">Allergies</label>
+            <input type="text" id="profile-input-allergies" value="Penicillin, Peanuts" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <i data-lucide="save"></i> Update Profile Information
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Script logic loaded at the bottom -->
   <script src="app.js"></script>
 </body>

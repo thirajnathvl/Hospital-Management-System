@@ -197,6 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
     bookingSpecialty: document.getElementById('booking-specialty'),
     bookingDoctor: document.getElementById('booking-doctor'),
     bookingDate: document.getElementById('booking-date'),
+    bookingTime: document.getElementById('booking-time'),
+    bookingReason: document.getElementById('booking-reason'),
     bookingForm: document.getElementById('appointment-booking-form'),
     doctorBookingPreview: document.getElementById('doctor-booking-preview'),
     doctorBookingPreviewCard: document.getElementById('doctor-booking-preview-card'),
@@ -205,6 +207,19 @@ document.addEventListener('DOMContentLoaded', () => {
     prescriptionsGrid: document.getElementById('prescriptions-grid-container'),
     billingOutstanding: document.getElementById('billing-outstanding'),
     billingTableBody: document.getElementById('billing-table-body'),
+
+    // User Profile UI nodes
+    profileMenuBtn: document.getElementById('profile-menu-btn'),
+    sidebarUserCard: document.querySelector('.sidebar-user-card'),
+    profileModal: document.getElementById('profile-modal'),
+    closeProfileModal: document.getElementById('close-profile-modal'),
+    profileForm: document.getElementById('profile-edit-form'),
+    profileInputName: document.getElementById('profile-input-name'),
+    profileInputBlood: document.getElementById('profile-input-blood'),
+    profileInputPhone: document.getElementById('profile-input-phone'),
+    profileInputAllergies: document.getElementById('profile-input-allergies'),
+    profileDisplayName: document.getElementById('profile-display-name'),
+    profileAvatarChar: document.getElementById('profile-avatar-char'),
     
     // Doctor Portal View nodes
     docScheduleList: document.getElementById('doctor-schedule-list'),
@@ -1951,6 +1966,91 @@ document.addEventListener('DOMContentLoaded', () => {
       await Navigation.switchView(State.currentRole + '-dashboard');
     });
   }
+
+  // ==========================================
+  // User Profile Modal Controls & Dynamic Binding
+  // ==========================================
+  const loadUserProfile = () => {
+    const profile = localStorage.getItem('medcore-user-profile');
+    if (profile) {
+      const data = JSON.parse(profile);
+      if (DOM.sidebarUserName && State.currentRole === 'patient') DOM.sidebarUserName.innerText = data.name;
+      const initials = data.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      if (DOM.sidebarAvatar && State.currentRole === 'patient') DOM.sidebarAvatar.innerText = initials;
+      if (DOM.headerAvatar && State.currentRole === 'patient') DOM.headerAvatar.innerText = initials;
+      if (DOM.profileDisplayName) DOM.profileDisplayName.innerText = data.name;
+      if (DOM.profileAvatarChar) DOM.profileAvatarChar.innerText = initials;
+
+      // Update Digital Health Card if rendered on screen
+      const healthCardName = document.querySelector('.card-patient-name');
+      if (healthCardName) healthCardName.innerText = data.name.toUpperCase();
+      
+      const details = document.querySelectorAll('.card-details-grid p');
+      if (details.length >= 4) {
+        details[1].innerText = data.blood; // Blood Group
+        details[2].innerText = data.allergies; // Allergies
+        details[3].innerText = data.phone; // Emergency Contact
+      }
+    }
+  };
+
+  const openProfileModal = () => {
+    // Populate form with current values
+    const profile = localStorage.getItem('medcore-user-profile');
+    if (profile) {
+      const data = JSON.parse(profile);
+      DOM.profileInputName.value = data.name;
+      DOM.profileInputBlood.value = data.blood;
+      DOM.profileInputPhone.value = data.phone;
+      DOM.profileInputAllergies.value = data.allergies;
+    } else {
+      DOM.profileInputName.value = "John Doe";
+      DOM.profileInputBlood.value = "O+";
+      DOM.profileInputPhone.value = "+1 555-0199";
+      DOM.profileInputAllergies.value = "Penicillin, Peanuts";
+    }
+    DOM.profileModal.classList.remove('hidden');
+  };
+
+  if (DOM.profileMenuBtn) {
+    DOM.profileMenuBtn.addEventListener('click', openProfileModal);
+  }
+
+  if (DOM.sidebarUserCard) {
+    DOM.sidebarUserCard.style.cursor = 'pointer';
+    DOM.sidebarUserCard.addEventListener('click', () => {
+      if (State.currentRole === 'patient') {
+        openProfileModal();
+      } else {
+        alert(`Profile manager is only active for Patients in this demo simulator.`);
+      }
+    });
+  }
+
+  if (DOM.closeProfileModal) {
+    DOM.closeProfileModal.addEventListener('click', () => {
+      DOM.profileModal.classList.add('hidden');
+    });
+  }
+
+  if (DOM.profileForm) {
+    DOM.profileForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const updatedProfile = {
+        name: DOM.profileInputName.value.trim(),
+        blood: DOM.profileInputBlood.value.trim(),
+        phone: DOM.profileInputPhone.value.trim(),
+        allergies: DOM.profileInputAllergies.value.trim()
+      };
+      localStorage.setItem('medcore-user-profile', JSON.stringify(updatedProfile));
+      loadUserProfile();
+      DOM.profileModal.classList.add('hidden');
+      alert("Patient profile information updated successfully!");
+    });
+  }
+
+  // Load user profile on page start
+  loadUserProfile();
 
   // Initialize navigation and default views
   Navigation.init();
