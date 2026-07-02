@@ -3,6 +3,8 @@
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Safety fallback for Lucide icons library to prevent CDN failure crashes
+  const lucide = window.lucide || { createIcons: () => console.warn("Lucide SDK not loaded.") };
   
   // ==========================================
   // 1. Initial State & Comprehensive Mock Data
@@ -146,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     themeIconDark: document.querySelector('.theme-icon-dark'),
     themeIconLight: document.querySelector('.theme-icon-light'),
     roleSelect: document.getElementById('role-select'),
+    headerHomeBtn: document.getElementById('header-home-btn'),
     sidebarLinksContainer: document.getElementById('portal-links'),
     contentArea: document.getElementById('content-area'),
     sidebar: document.getElementById('app-sidebar'),
@@ -2051,6 +2054,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load user profile on page start
   loadUserProfile();
+
+  // Home navigation button click logic
+  if (DOM.headerHomeBtn) {
+    DOM.headerHomeBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await Navigation.switchView(State.currentRole + '-dashboard');
+    });
+  }
 
   // Initialize navigation and default views
   Navigation.init();
