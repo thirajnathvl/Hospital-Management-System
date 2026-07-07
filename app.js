@@ -591,9 +591,15 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     async init() {
-      await DBManager.init();
       this.renderSidebarLinks();
       await this.switchView(State.currentRole + '-dashboard');
+      
+      // Initialize database connection in the background to prevent UI rendering block
+      DBManager.init().then(async () => {
+        if (DBManager.isConnected) {
+          await this.switchView(State.currentView);
+        }
+      });
       
       // Bind click events to navigation links
       document.addEventListener('click', async (e) => {
