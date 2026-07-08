@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="MedCore - Premium Hospital Management and Information Portal. Access medical records, book appointments, check bed availability, and view doctor schedules easily.">
   <title>MedCore | Advanced Hospital Management System</title>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1044,5 +1047,14 @@
 
   <!-- Script logic loaded at the bottom -->
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+          .catch(err => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
